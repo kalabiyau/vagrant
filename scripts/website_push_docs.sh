@@ -1,17 +1,38 @@
 #!/bin/bash
 
+# Set the tmpdir
+if [ -z "$TMPDIR" ]; then
+  TMPDIR="/tmp"
+fi
+
+# Set the path
+DEPLOY="$TMPDIR/vagrant-docs"
+rm -rf $DEPLOY
+mkdir -p $DEPLOY
+
 # Get the parent directory of where this script is.
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
 DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 
+# Copy into tmpdir
+cp -R $DIR/website/docs/ $DEPLOY/
+
 # Change into that directory
-cd $DIR
+cd $DEPLOY
 
-# Add the git remote if it doesn't exist
-git remote | grep heroku-docs || {
-    git remote add heroku-docs git@heroku.com:vagrantup-docs-2.git
-}
+# Ignore some stuff
+touch .gitignore
+echo ".sass-cache" >> .gitignore
+echo "build" >> .gitignore
 
-# Push the subtree (force)
-git push heroku-docs `git subtree split --prefix website/docs master`:master --force
+# Add everything
+git init .
+git add .
+git commit -q -m "Deploy by $USER"
+
+git remote add heroku git@heroku.com:vagrantup-docs-2.git
+git push -f heroku master
+
+# Cleanup the deploy
+rm -rf $DEPLOY
